@@ -57,6 +57,16 @@ class Process:
         }
 
     def __speech_to_text(self, audio_bytes: bytes, diarization: pd.DataFrame) -> pd.DataFrame:
+        """
+        Converts speech segments from an audio file into text using an external API.
+        Parameters:
+            audio_bytes (bytes): The audio file content as bytes.
+            diarization (pd.DataFrame): DataFrame containing diarization data with start and end times.
+        Returns:
+            pd.DataFrame: Updated DataFrame with the text obtained from speech-to-text conversion.
+        Raises:
+            Exception: Raises an exception if speech-to-text conversion fails.
+        """
         try:
             self.utils.log.info('Starting speech to text')
             audio = AudioSegment.from_file(io.BytesIO(audio_bytes), format="mp3")
@@ -87,6 +97,15 @@ class Process:
             raise e
 
     def __diarize(self, audio: bytes) -> pd.DataFrame:
+        """
+        Performs speaker diarization on an audio file to identify different speakers and their speech segments.
+        Parameters:
+            audio (bytes): The audio file content as bytes.
+        Returns:
+            pd.DataFrame: A DataFrame containing columns for start and end times, and speaker labels.
+        Raises:
+            Exception: If diarization API call fails, it logs the error and raises an exception.
+        """
         try:
             self.utils.log.info('Starting diarization')
             file = {'file': io.BytesIO(audio)}
@@ -116,6 +135,12 @@ class Process:
             raise e
 
     def pre_process(self) -> None:
+        """
+        Handles the preprocessing steps including diarization and speech-to-text
+        for the given session and interview IDs.
+        Raises:
+            Exception: Captures and logs any exception that occurs during the preprocessing steps, then re-raises it.
+        """
         print('Program started => Session: {} | Interview: {}'.format(self.session_id,
                                                                       self.interview_id))
         self.utils.log.info('Program started => Session: {} | Interview: {}'.format(self.session_id,
@@ -143,6 +168,15 @@ class Process:
             self.utils.__del__()
 
     async def __fetch(self, session, url, identifier):
+        """
+        Asynchronously fetches data from a given URL using aiohttp session.
+        Parameters:
+            session (aiohttp.ClientSession): The session for making HTTP requests.
+            url (str): The URL to which the request is to be sent.
+            identifier (str): A label identifying the type of data being fetched.
+        Returns:
+            ApiResponse: An object containing the identifier, status, and content of the response.
+        """
         try:
             async with session.post(url, params=self.params) as response:
                 response.raise_for_status()  # Raise HTTPError for bad responses (4xx and 5xx)
@@ -152,12 +186,25 @@ class Process:
             return ApiResponse(identifier=identifier, status='error', content=str(e))
 
     async def __call_apis(self, urls: List[str], identifiers: List[str]) -> List[ApiResponse]:
+        """
+        Asynchronously calls multiple APIs and collects their responses.
+        Parameters:
+            urls (List[str]): List of URLs to send requests to.
+            identifiers (List[str]): Corresponding identifiers for each URL.
+        Returns:
+            List[ApiResponse]: A list of ApiResponse objects containing the responses from each API call.
+        """
         async with aiohttp.ClientSession() as session:
             tasks = [self.__fetch(session, url, identifier) for url, identifier in zip(urls, identifiers)]
             responses = await asyncio.gather(*tasks, return_exceptions=True)
             return responses
 
     async def process_all(self):
+        """
+        Manages the entire processing workflow including API calls for audio, text, and video analysis.
+        Raises:
+            HTTPException: On failure, logs detailed error info and raises HTTPException with status code 500.
+        """
         print('Inference started => Session: {} | Interview: {}'.format(self.session_id,
                                                                         self.interview_id))
         self.utils.log.info('Inference started => Session: {} | Interview: {}'.format(self.session_id,
@@ -196,11 +243,22 @@ class Process:
 
 @app.get("/health")
 def health():
+    """
+    Returns the health status of the API.
+    Description: Endpoint for checking the health status of the application.
+    Response: Returns a JSON object with the status "ok".
+    """
     return {"status": "ok"}
 
 
 @app.post("/preprocess")
 async def pre_process(request: PredictRequest):
+    """
+    Handles preprocessing of audio data.
+    Parameters: session_id (int): ID of the session.
+                interview_id (int): ID of the interview.
+    Returns: Returns a JSON object with the status "ok" upon successful processing.
+    """
     session_id = request.session_id
     interview_id = request.interview_id
 
@@ -212,6 +270,12 @@ async def pre_process(request: PredictRequest):
 
 @app.post("/predict")
 async def predict(request: PredictRequest):
+    """
+    Manages the complete processing and inference workflow.
+    Parameters: session_id (int): ID of the session.
+                interview_id (int): ID of the interview.
+    Returns: Returns a JSON object with the status "ok" upon successful processing.
+    """
     session_id = request.session_id
     interview_id = request.interview_id
 
