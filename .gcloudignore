@@ -12,18 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# A gitignore file specifies intentionally untracked files that Git should ignore.
+# The .gcloudignore file excludes file from upload to Cloud Build.
+# If this file is deleted, gcloud will default to .gitignore.
+#
+# https://cloud.google.com/cloud-build/docs/speeding-up-builds#gcloudignore
+# https://cloud.google.com/sdk/gcloud/reference/topic/gcloudignore
+
+# Ignore everything specified in .gitignore
+#!include:.gitignore
 
 # Exclude locally installed dependencies
 venv/
-__pycache__/
-.env
-# Exclude local IDE settings
-.idea/
-.vscode/
 
-# Exclude testing cache
-.pytest_cache/
-
-# macOS
-**/.DS_Store
+# Exclude git history and configuration.
+.git/
+.gitignore

@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     https://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,18 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# A gitignore file specifies intentionally untracked files that Git should ignore.
+import flask
+from flask.testing import FlaskClient
 
-# Exclude locally installed dependencies
-venv/
-__pycache__/
-.env
-# Exclude local IDE settings
-.idea/
-.vscode/
 
-# Exclude testing cache
-.pytest_cache/
+def test_get_index(app: flask.app.Flask, client: FlaskClient) -> None:
+    res = client.get("/")
+    assert res.status_code == 200
 
-# macOS
-**/.DS_Store
+
+def test_post_index(app: flask.app.Flask, client: FlaskClient) -> None:
+    res = client.post("/")
+    assert res.status_code == 405
