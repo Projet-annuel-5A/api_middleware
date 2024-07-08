@@ -195,7 +195,16 @@ class Utils:
             if isinstance(handler, BufferingHandler):
                 log = handler.flush()
                 if log:
-                    self.save_to_s3('{}_{}.log'.format(name, handler.filename), log.encode(), 'text', 'logs')
+                    s3_path = 'logs/{}_{}'.format(name, handler.filename)
+                    try:
+                        self.supabase_connection.upload(file=log.encode(),
+                                                        path=s3_path,
+                                                        file_options={'content-type': 'text/plain'}
+                                                        )
+                        self.log.info('Log file {}_{} uploaded to S3 bucket'.format(name, handler.filename))
+                    except Exception as e:
+                        self.log.error('Error uploading the file {}_{} to the S3 bucket : {}.'.
+                                       format(name, handler.filename, str(e)))
             logging.getLogger('mainLog').removeHandler(handler)
 
     def __check_supabase_connection(self) -> Client:
@@ -239,38 +248,6 @@ class Utils:
             print(message)
             sys.exit(1)
         return connection
-
-    def save_to_s3(self, filename: str, content: Any, file_format: str, s3_subfolder: str = None) -> None:
-        """
-       Saves a file to an S3 bucket.
-       Parameters:
-           filename (str): The name of the file to save.
-           content (Any): The content of the file.
-           file_format (str): The format of the file (audio, video, text).
-           s3_subfolder (str): Optional. The subfolder within the S3 bucket to save the file.
-       Raises:
-           Exception: Raises an exception if the file upload fails.
-       """
-        match file_format:
-            case 'audio':
-                content_type = 'audio/mpeg'
-            case 'video':
-                content_type = 'video/mp4'
-            case 'text':
-                content_type = 'text/plain'
-            case _:
-                content_type = 'text/plain'
-
-        try:
-            s3_path = '{}/{}/{}'.format(self.output_s3_folder,
-                                        s3_subfolder,
-                                        filename) if s3_subfolder else '{}/{}'.format(self.output_s3_folder, filename)
-            self.supabase_connection.upload(file=content, path=s3_path, file_options={'content-type': content_type})
-            self.log.info('File {} uploaded to S3 bucket at {}'.format(filename, s3_path))
-        except Exception as e:
-            message = ('Error uploading the file {} to the S3 bucket.'.
-                       format(filename), str(e))
-            self.log.error(message)
 
     def open_input_file(self, s3_path: str, file_name: str) -> bytes | None:
         """

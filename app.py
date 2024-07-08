@@ -1,5 +1,6 @@
 import os
 import io
+import time
 import asyncio
 import aiohttp
 import uvicorn
@@ -212,7 +213,7 @@ class Process:
         try:
             urls = [
                 'http://{}:8001/analyse_audio'.format(os.environ.get('API_AUDIO_IP')),
-                'http://{}:8004/analyse_text'.format(os.environ.get('API_TEXT_IP')),
+                'http://{}:8002/analyse_text'.format(os.environ.get('API_TEXT_IP')),
                 'http://{}:8003/analyse_video'.format(os.environ.get('API_VIDEO_IP'))
             ]
             identifiers = ['audio', 'text', 'video']
@@ -262,8 +263,12 @@ async def pre_process(request: PredictRequest):
     session_id = request.session_id
     interview_id = request.interview_id
 
+    start_time = time.time()
+
     process = Process(session_id, interview_id)
     process.pre_process()
+
+    print('Preprocessing finished in {} seconds'.format(time.time() - start_time))
 
     return {"status": "ok"}
 
@@ -279,8 +284,13 @@ async def predict(request: PredictRequest):
     session_id = request.session_id
     interview_id = request.interview_id
 
+    start_time = time.time()
+
     process = Process(session_id, interview_id)
     await process.process_all()
+
+    print('Processing finished in {} seconds'.format(time.time() - start_time))
+
     return {"status": "ok"}
 
 
