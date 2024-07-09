@@ -230,11 +230,21 @@ class Process:
         self.utils.log.info('Inference started => Session: {} | Interview: {}'.format(self.session_id,
                                                                                       self.interview_id))
         try:
-            urls = [
-                'http://{}:8001/analyse_audio'.format(os.environ.get('API_AUDIO_IP')),
-                'http://{}:8002/analyse_text'.format(os.environ.get('API_TEXT_IP')),
-                'http://{}:8003/analyse_video'.format(os.environ.get('API_VIDEO_IP'))
-            ]
+            if os.environ.get('ENV') == "dev":
+                urls = [
+                    'http://{}:8001/analyse_audio'.format(os.environ.get('API_AUDIO_IP')),
+                    'http://{}:8002/analyse_text'.format(os.environ.get('API_TEXT_IP')),
+                    'http://{}:8003/analyse_video'.format(os.environ.get('API_VIDEO_IP'))
+                ]
+            elif os.environ.get('ENV') == "prod":
+                urls = [
+                    'https://{}/analyse_audio'.format(os.environ.get('API_AUDIO_IP')),
+                    'https://{}/analyse_text'.format(os.environ.get('API_TEXT_IP')),
+                    'https://{}/analyse_video'.format(os.environ.get('API_VIDEO_IP'))
+                ]
+            else :
+                raise Exception(f"Unknown ENV environnement variable: {os.environ.get('ENV')}")
+
             identifiers = ['audio', 'text', 'video']
             responses = await self.__call_apis(urls, identifiers)
 
