@@ -123,7 +123,7 @@ class Process:
         audio_stream = next(s for s in container.streams if s.type == 'audio')
 
         # Create an output container for audio
-        output_container = av.open(audio_buffer, mode='w', format='mp3')  # You can change the format as needed
+        output_container = av.open(audio_buffer, mode='w', format='mp3')
 
         # Add a stream to the output container
         output_audio_stream = output_container.add_stream('mp3')
@@ -171,7 +171,10 @@ class Process:
             diarization = self.__diarize(audio_file)
             print('Diarization done')
 
-            results = self.__speech_to_text(audio_file, diarization)
+            # Keep only segments equal or longer than 1 second
+            diarization_filtered = diarization[(diarization['end'] - diarization['start']) >= 1000]
+
+            results = self.__speech_to_text(audio_file, diarization_filtered)
             print('Speech to text done')
 
             self.utils.save_results_to_bd(results)
