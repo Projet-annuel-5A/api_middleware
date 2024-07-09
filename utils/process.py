@@ -21,7 +21,7 @@ class ApiResponse:
 
 
 class Process:
-    def __init__(self, session_id: int, interview_id: int):
+    def __init__(self, session_id: int, interview_id: int, model_type: str = None):
         load_dotenv()
         self.increasing_tqdm = False
         self.session_id = session_id
@@ -29,7 +29,8 @@ class Process:
         self.utils = Utils(session_id, interview_id)
         self.params = {
             'session_id': self.session_id,
-            'interview_id': self.interview_id
+            'interview_id': self.interview_id,
+            'model_type': model_type
         }
 
     def __speech_to_text(self, audio_bytes: bytes, diarization: pd.DataFrame) -> pd.DataFrame:
@@ -102,9 +103,21 @@ class Process:
             df['start'] = df['start'].map(lambda x: int(x * 1000))
             df['end'] = df['end'].map(lambda x: int(x * 1000))
             df['speaker'] = df['speaker'].map(lambda x: int(x.split('_')[1]))
-            self.utils.update_bool_db('diarization_ok', True)
+            print(df)
+
+            # Keep only segments equal or longer than 1 second
+            df_filtered = df[(df['end'] - df['start']) >= 1000]
+
+            # Set the minimum speaker label to 0
+            min_speaker = df_filtered['speaker'].min()
+            if min_speaker != 0:
+                df_filtered.loc[df_filtered['speaker'] == min_speaker, 'speaker'] = 0
+
+            # Set the rest of the speaker labels to 1
+            df_filtered.loc[df_filtered['speaker'] != 0, 'speaker'] = 1
+
             self.utils.log.info('Diarization done')
-            return df
+            return df_filtered
 
         except Exception as e:
             self.utils.log.error('An error occurred: {}'.format(e))
@@ -171,13 +184,11 @@ class Process:
             diarization = self.__diarize(audio_file)
             print('Diarization done')
 
-            # Keep only segments equal or longer than 1 second
-            diarization_filtered = diarization[(diarization['end'] - diarization['start']) >= 1000]
-
-            results = self.__speech_to_text(audio_file, diarization_filtered)
+            results = self.__speech_to_text(audio_file, diarization)
             print('Speech to text done')
 
             self.utils.save_results_to_bd(results)
+            self.utils.update_bool_db('diarization_ok', True)
             print('Results saved to database')
         except Exception as e:
             print('An error occurred: {}'.format(e))
@@ -242,7 +253,7 @@ class Process:
                     'https://{}/analyse_text'.format(os.environ.get('API_TEXT_IP')),
                     'https://{}/analyse_video'.format(os.environ.get('API_VIDEO_IP'))
                 ]
-            else :
+            else:
                 raise Exception(f"Unknown ENV environnement variable: {os.environ.get('ENV')}")
 
             identifiers = ['audio', 'text', 'video']

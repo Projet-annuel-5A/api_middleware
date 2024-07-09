@@ -15,6 +15,7 @@ The module consists of several Python files organized as follows:
 middleware/
 ├── app.py
 ├── utils/
+│   ├── process.py
 │   ├── utils.py
 ```
 
@@ -48,6 +49,7 @@ Returns: Returns a JSON object with the status "ok" upon successful processing.
 Manages the complete processing and inference workflow.
 Parameters: session_id (int): ID of the session.
             interview_id (int): ID of the interview.
+            model (str): Name of the model to be used for video inference.
 Returns: Returns a JSON object with the status "ok" upon successful processing.
 """
 ```
@@ -56,3 +58,6 @@ Returns: Returns a JSON object with the status "ok" upon successful processing.
 ### Utilities (utils/utils.py): 
 Includes logging setup, configuration management, and methods for file operations on S3 storage.
 Implements methods for updating database records and managing connections to Supabase for data storage.
+
+### Process (utils/process.py): 
+Includes the necessary steps for audio extraction and processing, such as diarization and speech-to-text conversion.
