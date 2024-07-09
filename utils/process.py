@@ -6,7 +6,7 @@ import aiohttp
 import requests
 import pandas as pd
 from typing import List
-from utils import Utils
+from .utils import Utils
 from pydub import AudioSegment
 from dotenv import load_dotenv
 from fastapi import HTTPException
