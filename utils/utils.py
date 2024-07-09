@@ -107,6 +107,7 @@ class Utils:
             self.interview_id = interview_id
 
             # S3 Folders
+            self.bucket_name = self.config['SUPABASE']['InputBucket']
             self.output_s3_folder = '{}/{}/output'.format(self.session_id, self.interview_id)
 
             # Create loggers
@@ -195,7 +196,7 @@ class Utils:
             if isinstance(handler, BufferingHandler):
                 log = handler.flush()
                 if log:
-                    s3_path = 'logs/{}_{}'.format(name, handler.filename)
+                    s3_path = '{}/{}/logs/{}_{}'.format(self.session_id, self.interview_id, name, handler.filename)
                     try:
                         self.supabase_connection.upload(file=log.encode(),
                                                         path=s3_path,
@@ -236,14 +237,13 @@ class Utils:
             Exception: Logs an error and terminates the application if the connection to the S3 bucket fails.
                        This ensures that the application does not continue without necessary storage capabilities.
         """
-        bucket_name = self.config['SUPABASE']['InputBucket']
-        connection = self.supabase_client.storage.from_(bucket_name)
+        connection = self.supabase_client.storage.from_(self.bucket_name)
         try:
             connection.list()
-            self.log.info('Connection to S3 bucket {} successful'.format(bucket_name))
+            self.log.info('Connection to S3 bucket {} successful'.format(self.bucket_name))
         except Exception as e:
             message = ('Error connecting to S3 bucket {}, the program can not continue.'.
-                       format(bucket_name), str(e))
+                       format(self.bucket_name), str(e))
             self.log.error(message)
             print(message)
             sys.exit(1)

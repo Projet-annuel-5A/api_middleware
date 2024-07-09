@@ -1,3 +1,4 @@
+import av
 import os
 import io
 import asyncio
@@ -5,7 +6,7 @@ import aiohttp
 import requests
 import pandas as pd
 from typing import List
-from utils.utils import Utils
+from utils import Utils
 from pydub import AudioSegment
 from dotenv import load_dotenv
 from fastapi import HTTPException
@@ -109,6 +110,43 @@ class Process:
             self.utils.log.error('An error occurred: {}'.format(e))
             raise e
 
+    def __extract_audio(self, video_path, video_name, audio_path) -> bytes:
+        video_bytes = self.utils.open_input_file(video_path, video_name)
+
+        # Create an in-memory binary stream from the byte array
+        container = av.open(io.BytesIO(video_bytes))
+
+        # Initialize an in-memory buffer to store the extracted audio
+        audio_buffer = io.BytesIO()
+
+        # Extract the audio stream
+        audio_stream = next(s for s in container.streams if s.type == 'audio')
+
+        # Create an output container for audio
+        output_container = av.open(audio_buffer, mode='w', format='mp3')  # You can change the format as needed
+
+        # Add a stream to the output container
+        output_audio_stream = output_container.add_stream('mp3')
+
+        # Process the audio frames and write them to the output container
+        for frame in container.decode(audio_stream):
+            packet = output_audio_stream.encode(frame)
+            if packet:
+                output_container.mux(packet)
+
+        # Finalize the audio container
+        output_container.close()
+
+        # Get the extracted audio bytes
+        audio_bytes = audio_buffer.getvalue()
+        audio_buffer.close()
+
+        self.utils.supabase.storage.from_(self.utils.bucket_name).upload(file=audio_bytes,
+                                                                         path=audio_path,
+                                                                         file_options={"content-type": "audio/mpeg"})
+
+        return audio_bytes
+
     def pre_process(self) -> None:
         """
         Handles the preprocessing steps including diarization and speech-to-text
@@ -121,9 +159,13 @@ class Process:
         self.utils.log.info('Program started => Session: {} | Interview: {}'.format(self.session_id,
                                                                                     self.interview_id))
         try:
-            filename = self.utils.config['GENERAL']['Audioname']
-            s3_path = '{}/{}/raw/{}'.format(self.session_id, self.interview_id, filename)
-            audio_file = self.utils.open_input_file(s3_path, filename)
+            video_name = self.utils.config['GENERAL']['Videoname']
+            audio_name = self.utils.config['GENERAL']['Audioname']
+            s3_path = '{}/{}/raw'.format(self.session_id, self.interview_id)
+            video_path = '{}/{}'.format(s3_path, video_name)
+            audio_path = '{}/{}'.format(s3_path, audio_name)
+
+            audio_file = self.__extract_audio(video_path, video_name, audio_path)
 
             # Diarize and split the audio file
             diarization = self.__diarize(audio_file)
@@ -201,6 +243,7 @@ class Process:
                 else:
                     self.utils.log.error(f"Error from {response.identifier}: {response.content}")
 
+            self.utils.update_bool_db('inference_ok', True)
             self.utils.log.info('Sentiment detection from text, audio and video have finished')
             self.utils.log.info('Program finished successfully')
             print('Program finished successfully')
