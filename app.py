@@ -23,9 +23,15 @@ app.add_middleware(
 )
 
 
+class PreprocessRequest(BaseModel):
+    session_id: int
+    interview_id: int
+
+
 class PredictRequest(BaseModel):
     session_id: int
     interview_id: int
+    model: str
 
 
 @app.get("/health")
@@ -39,7 +45,7 @@ def health():
 
 
 @app.post("/preprocess")
-async def pre_process(request: PredictRequest):
+async def pre_process(request: PreprocessRequest):
     """
     Handles preprocessing of audio data.
     Parameters: session_id (int): ID of the session.
@@ -65,10 +71,12 @@ async def predict(request: PredictRequest):
     Manages the complete processing and inference workflow.
     Parameters: session_id (int): ID of the session.
                 interview_id (int): ID of the interview.
+                model (str): Name of the model to be used for video inference.
     Returns: Returns a JSON object with the status "ok" upon successful processing.
     """
     session_id = request.session_id
     interview_id = request.interview_id
+    model = request.model
 
     start_time = time.time()
 
