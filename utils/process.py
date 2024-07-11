@@ -103,7 +103,6 @@ class Process:
             df['start'] = df['start'].map(lambda x: int(x * 1000))
             df['end'] = df['end'].map(lambda x: int(x * 1000))
             df['speaker'] = df['speaker'].map(lambda x: int(x.split('_')[1]))
-            print(df)
 
             # Keep only segments equal or longer than 1 second
             df_filtered = df[(df['end'] - df['start']) >= 1000]
@@ -258,14 +257,17 @@ class Process:
 
             identifiers = ['audio', 'text', 'video']
             responses = await self.__call_apis(urls, identifiers)
-
             for response in responses:
-                if response.status == 'ok':
-                    column_name = response.identifier + '_ok'
-                    print(f"Updating database boolean for {column_name}")
-                    self.utils.update_bool_db(column_name, True)
-                else:
-                    self.utils.log.error(f"Error from {response.identifier}: {response.content}")
+                try:
+                    if response.status == 'ok':
+                        column_name = response.identifier + '_ok'
+                        print('Updating database boolean for {}'.format(column_name))
+                        self.utils.update_bool_db(column_name, True)
+                    else:
+                        self.utils.log.error('Error from {}: {}'.format(response.identifier, response.content))
+                except Exception as e:
+                    self.utils.log.error('An error occurred: {}'.format(e))
+                    print('An error occurred: {}'.format(e))
 
             self.utils.update_bool_db('inference_ok', True)
             self.utils.log.info('Sentiment detection from text, audio and video have finished')

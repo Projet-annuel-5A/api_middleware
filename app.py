@@ -80,7 +80,7 @@ async def predict(request: PredictRequest):
 
     start_time = time.time()
 
-    process = Process(session_id, interview_id)
+    process = Process(session_id, interview_id, model)
     await process.process_all()
 
     print('Processing finished in {} seconds'.format(time.time() - start_time))
